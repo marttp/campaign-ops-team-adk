@@ -1,49 +1,246 @@
-# Campaign Ops Agent - ADK Python Version
+# Campaign Ops Agent – ADK Python Version
 
 ## Overview
-The Campaign Ops Agent is a multi-agent system built in Python using Google's Agent Development Kit (ADK). Its purpose is to automate the end-to-end planning and orchestration of marketing campaigns for businesses. Marketing teams often struggle to coordinate segmentation, channel planning, scheduling, and delivery while tracking historical performance. This agent orchestrates those tasks, freeing marketing ops teams from manual coordination and reducing campaign errors.
 
-## Business Use Case
-Marketing teams repeatedly create campaigns to promote products or services. Each campaign starts with a brief that contains objectives, key performance indicators (KPIs), audience definitions, and constraints. Teams must translate that brief into a structured campaign plan: who to target, which channels to use (email, push, SMS), when to send, and how to avoid overlapping campaigns. They also need to generate the data payload for the delivery system. Historically this work is done manually across multiple tools and often leads to errors, wasted spend, and inconsistent targeting. The Campaign Ops Agent solves this by automating segmentation, planning, risk checks, and specification generation.
+The Campaign Ops Agent is a multi-agent system built in Python using Google's Agent Development Kit (ADK). Its purpose is to automate the end-to-end planning and orchestration of marketing campaigns for businesses. Marketing teams often struggle to coordinate segmentation, channel planning, scheduling, and content delivery while tracking historical performance. This agent orchestrates those tasks across multiple sub-agents.
 
-## Multi-Agent Architecture
-The system consists of an orchestrator and a set of specialized agents grouped by function. Grouping agents allows the design to scale while meeting ADK requirements for multi-agent systems. Each agent group can contain one or more underlying agents depending on complexity.
+This system follows a strict sequential pipeline:
 
-### Group 1: Segment Group
-Responsible for parsing the campaign brief, extracting objectives, identifying target segments, and enriching them with additional filters.
+Frontline Group → Planner/Marketing Group → Delivery Group
 
-- **Intake & Segmentation Agent**: Powered by an LLM to interpret unstructured briefs, extract KPIs and constraints, and build audience segments via queries to customer data stores using the Agent Tool interface.
+Each group contains specialized agents, and the Campaign Ops Orchestrator coordinates the whole workflow. The Reporter Agent in the Planner group is the final step before passing outputs downstream.
 
-### Group 2: Planner & Scheduling Group
-Plans channels, cadence, and delivery schedules while checking for conflicts with existing campaigns.
+This document outlines the multi-agent architecture, agent behaviors, memory, tools, and coordination logic.
 
-- **Planning Agent**: Chooses channels and schedules send times based on rules, channel capacity, and user preferences.
-- **Risk Agent**: Runs in parallel to the planner agent to detect audience collisions, regulatory constraints, and schedule conflicts, then recommends adjustments. These agents demonstrate parallel, sequential, and loop patterns: the planner and risk agents operate concurrently, and the orchestrator may loop back to recalculate if the risk agent flags a conflict.
+## Agent Groups
 
-### Group 3: Delivery Group
-Generates the final artifacts needed by backend services.
+### 1. Frontline Group (3 agents)
+These agents interpret raw campaign requests, contextual data, and usage metrics.
 
-- **Export Agent**: Composes a structured campaign specification, including target user IDs or attributes, channel payloads, and schedules, and writes it to the required backend (e.g., a CRM or message delivery API).
+**Agents:**
+- **Intake Agent**  
+  Extracts campaign type, objectives, rough segmentation hypotheses, and constraints.
 
-## Orchestrator Responsibilities
-Manages the overall workflow. It holds a session object for each campaign, passes intermediate results between groups, and persists long-term learnings (via a memory service) about successful segments, channel rules, and collision patterns. It also logs and traces every agent call for observability.
+- **Frontline Critic Agent**  
+  Domain-specific evaluation for frontline context.  
+  Ensures the Intake Agent’s output is meaningful and consistent with product metrics.
 
-## Key ADK Concepts Demonstrated
-- **Multi-agent design**: Separate agents manage segmentation, planning, risk checking, and export. They can run sequentially and in parallel, with loopback if risk detection triggers a re-plan.
-- **LLM-powered agents**: The Intake & Segmentation Agent uses an LLM to summarize the brief and define segments.
-- **Tool integration**: Agents call external tools via ADK's Model Context Protocol (MCP), including customer database APIs for segmentation, calendar APIs for scheduling, and CRM APIs for exporting the campaign spec.
-- **Sessions & memory**: The orchestrator uses an in-memory session service to keep per-campaign context. A Memory Bank stores long-term knowledge (e.g., past segments, channel rules) for context engineering.
-- **Observability**: Every agent call logs its inputs, outputs, and tool results. Traces show the chain of decisions, and metrics expose success/error rates to support agent evaluation and debugging.
-- **Agent-to-Agent Protocol (A2A)**: Agents communicate via orchestrator-passed messages. The risk agent can send a message back to the planner agent to trigger a re-planning loop.
-- **Deployment**: The architecture can be deployed to Vertex AI Agent Engine or another runtime. Each group can scale independently, and the orchestrator centralizes state and error handling.
+**Tools used:**
+- Internal Data Agent tool (product features, company metrics)
 
-## Using This Agent with ADK (Python)
-1. **Define agent classes**: Create Python classes for `CampaignOrchestrator`, `IntakeSegmentationAgent`, `PlanningAgent`, `RiskAgent`, and `ExportAgent` using the ADK base classes. Implement `run()` to handle input messages and call tools via MCP.
-2. **Implement tools**: Define OpenAPI or custom tool functions for database queries, channel scheduling, risk checking, and export. Register them with the ADK environment.
-3. **Configure session and memory services**: Use `InMemorySessionService` for per-campaign state and `MemoryBank` for long-term storage. Provide keys to identify each campaign session.
-4. **Add observability**: Initialize logging, tracing, and metrics in your agent classes. Use ADK's evaluation hooks or integrate an LLM-as-judge to score segment quality.
-5. **Deploy**: Package the agent system as a service and deploy to Vertex AI Agent Engine or a comparable environment. The orchestrator listens for new campaign briefs and coordinates the agents.
+**Looping behavior:**
+- Intake Agent → Critic → (optional loop for refinement) → finalize intake package
+
+---
+
+### 2. Planner/Marketing Group
+Transforms abstract goals into actionable segmentation, scheduling, and delivery plans.
+
+**Agents:**
+- **Goal Planning Agent**  
+  Converts frontline output into structured goals, KPIs, and scheduling intent.
+
+- **Segmentation Discovery Agent**  
+  Generates segments, rules, estimate sizes, explores customer behavior.
+
+- **Planner Critic Agent**  
+  A specialist critic validating strategy feasibility, conflicts, and quality.
+
+- **Google Search Agent**  
+  Supports competitive research, seasonal patterns, industry insights.
+
+- **Reporter Agent (final agent of the group)**  
+  The last step of Planner group.  
+  Validates downstream requirements, compacts context, and produces a structured, orchestrator-ready JSON summary.
+
+**Loop behavior:**
+Goal Planning Agent → Segmentation Discovery → Planner Critic → Loop if needed → Reporter (final)
+
+**Reporter Output Contract:**
+The Reporter produces a clean JSON object including:
+- campaign_type  
+- primary and secondary goals  
+- discovered segments  
+- audience size  
+- constraints  
+- schedule plan  
+- risks & confidence estimates  
+- references to audience tools  
+- normalized plan for the Delivery group
+
+This output is guaranteed to be the Planner group’s final deliverable.
+
+---
+
+### 3. Delivery Group
+Transforms the Planner group’s final plan into execution-ready artifacts.
+
+**Agent:**
+- **Delivery Agent**  
+  Coordinates tools to prepare user attributes, email/push payloads, and final campaign components.
+
+**Tools:**
+- **Eligibility Tool**  
+  Produces user attributes or eligibility filters.
+
+- **Email Tool**  
+  Builds email payload templates.
+
+- **Push Notification Tool**  
+  Builds push payload templates.
+
+- **Segment Group Preparing Tool**  
+  Structures segments for audience creation.
+
+- **Find Audience Tool**  
+  Determines eligible users.
+
+- **Create Audience Tool**  
+  Generates final campaign audience.
+
+- **Campaign Creation Tool**  
+  Final orchestrated output: produces the final campaign object ready for execution in downstream systems.
+
+Delivery Agent → tools → final campaign payload
+
+---
+
+## Orchestrator: Campaign Ops Orchestrator
+
+The orchestrator governs:
+
+1. Flow control  
+2. Group-to-group sequencing  
+3. Context propagation  
+4. Loop bounding (max iterations per group)  
+5. Logging, metrics, and memory  
+
+Flow diagram:
+
+Frontline Group → Planner Reporter Agent → Delivery Group → Final Output
+
+Each group passes a structured JSON to the next group.
+
+---
+
+## Memory & Sessions
+
+### Session Service
+Maintains the conversation state per campaign creation process.
+
+Includes:
+- campaign_type  
+- constraints  
+- segment hypotheses  
+- planner outputs  
+- delivery outputs
+
+### Memory Bank
+Stores long-term reusable knowledge:
+- past campaign configurations  
+- best/worst/average performance references  
+- naming conventions  
+- historical risk patterns  
+- audiences previously used  
+- content schemas
+
+Reporter Agent performs **context compaction** before passing to the next group, ensuring memory and session stay lightweight.
+
+---
+
+## Tools Summary
+
+**Product Features Tool**  
+Returns up-to-date product metadata.
+
+**Company-wide Metric Tool**  
+Returns KPIs, performance metrics, MAU/DAU, etc.
+
+**Internal Data Agent Tool**  
+Merges product & metric tools into a frontend-ready info set.
+
+**Google Search Tool**  
+Queries external data for campaign ideation.
+
+**Segment Group Preparing Tool**  
+Creates segment definitions for the audience system.
+
+**Find Audience Tool**  
+Queries or simulates audience retrieval.
+
+**Create Audience Tool**  
+Registers final audience.
+
+**Eligibility Tool**  
+Prepares user attribute rules.
+
+**Email Tool**  
+Formats email message payloads.
+
+**Push Tool**  
+Formats push notification payloads.
+
+**Campaign Creation Tool**  
+Final deterministic wrapper that creates a unified campaign JSON.
+
+---
+
+## Agent Prompts (High-Level)
+
+### Intake Agent
+“Extract goals, constraints, segments hypotheses. Use company metrics provided by tools.”
+
+### Frontline Critic Agent
+“Evaluate intake output: realism, missing elements, conflicts.”
+
+### Goal Planning Agent
+“Convert intake package into structured goals, scheduling intent, KPI expectations.”
+
+### Segmentation Discovery Agent
+“Generate actionable segments, eligibility rules, size estimation.”
+
+### Planner Critic Agent
+“Evaluate strategic and scheduling feasibility, performance estimates.”
+
+### Google Search Agent
+“Gather competitive and industry insights for Planner group.”
+
+### Reporter Agent
+“You are the final agent of the Planner group. Produce a clean, validated, normalized JSON for delivery. Compact context. Ensure no missing fields.”
+
+### Delivery Agent
+“Use tools to build eligibility, email, push, and final campaign payload. Produce final campaign object.”
+
+---
+
+## Execution Flow Summary
+
+1. Orchestrator calls Frontline Group.  
+2. Frontline Group loops until Critic is satisfied.  
+3. Orchestrator passes result into Planner Group.  
+4. Planner Group loops until Critic is satisfied.  
+5. Reporter Agent generates final summary.  
+6. Orchestrator passes Reporter output to Delivery Group.  
+7. Delivery Agent calls all required tools.  
+8. Campaign Creation Tool produces final execution payload.  
+9. Orchestrator stores summary to Memory Bank.  
+10. Final output returned to user/system.
+
+---
+
+## Implementation Notes (ADK Python)
+
+- Each agent is implemented as an `Agent` object.  
+- Tools are Python functions exposed through ADK.  
+- Groups are orchestrated in Python via sequential workflows.  
+- Critic loops must be bounded (max 2–3 iterations).  
+- Reporter Agent is the *official exit* of the Planner group.  
+- Delivery sub-agents are tools, not agents.  
+- Memory Bank and Session Service maintain state.  
+- The Orchestrator is a Python class coordinating all steps.
+
+---
 
 ## Conclusion
-The Campaign Ops Agent demonstrates a practical multi-agent architecture for automating marketing campaign orchestration. It implements multi-agent sequencing, tool integration, session and memory management, observability and evaluation, agent-to-agent communication, and a clear deployment path. The outcome is a strong business case: reducing manual overhead, minimizing campaign collisions, and improving targeting accuracy, which translates into a better return on marketing spend.
 
+This multi-agent design provides a clean, production-ready orchestration model aligned with modern agent engineering principles. The Frontline, Planner, and Delivery groups each encapsulate specialized responsibility, with Reporter Agent acting as the final structured output provider for planning. The architecture is modular, scalable, and well-structured for both capstone demonstration and real-world enterprise use.
