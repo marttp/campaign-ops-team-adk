@@ -3,6 +3,7 @@ import vertexai
 from google.adk.agents.llm_agent import Agent
 from google.adk.models.google_llm import Gemini
 from .config import MODEL, GOOGLE_CLOUD_PROJECT, GOOGLE_CLOUD_LOCATION, retry_config
+from vertexai import agent_engines
 
 # from campaign_ops_team.sub_agents.frontline_group.frontline_agents import intake_agent, frontline_critic_agent
 # from campaign_ops_team.sub_agents.planner_group.planner_agents import (
@@ -36,4 +37,10 @@ root_agent = Agent(
     Then transfer to the Frontline Group.
     """,
     tools=[],
+)
+
+# Wrap the agent in an AdkApp object
+app = agent_engines.AdkApp(
+    agent=root_agent,
+    enable_tracing=True,
 )
