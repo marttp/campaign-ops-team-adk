@@ -16,7 +16,13 @@ uv run adk web
 ### Deploy Agent Engine
 
 ```bash
-uv run adk deploy agent_engine campaign_ops_team --agent_engine_config_file=campaign_ops_team/.agent_engine_config.json
+uv run adk deploy agent_engine campaign_ops_team --agent_engine_config_file=campaign_ops_team/.agent_engine_config.json --trace_to_cloud
+```
+
+### Deploy Agent Engine - Express Mode
+
+```bash
+uv run adk deploy agent_engine campaign_ops_team --api_key=[api_key] --agent_engine_config_file=campaign_ops_team/.agent_engine_config.json --trace_to_cloud
 ```
 
 ### Test connection - Agent Engine
