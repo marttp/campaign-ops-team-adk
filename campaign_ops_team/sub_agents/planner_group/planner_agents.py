@@ -2,7 +2,6 @@ from google.adk.agents import LlmAgent
 
 from campaign_ops_team.tools.tools import google_search, segment_group_preparing_tool
 from campaign_ops_team.config import retry_config, MODEL
-from campaign_ops_team.config import MODEL, retry_config
 from google.adk.models import Gemini
 
 # Goal Planning Agent
@@ -39,6 +38,18 @@ planner_critic_agent = LlmAgent(
     If good, output "APPROVED".
     If not, provide feedback.
     """
+)
+
+# Google Search Agent
+google_search_agent = LlmAgent(
+    name="google_search_agent",
+    model=Gemini(model=MODEL, retry_options=retry_config),
+    description="Supports competitive research, seasonal patterns, industry insights.",
+    instruction="""
+    You are the Google Search Agent. Your goal is to provide competitive research, seasonal patterns, and industry insights.
+    Use the google_search tool to find information.
+    """,
+    tools=[google_search]
 )
 
 # Reporter Agent
