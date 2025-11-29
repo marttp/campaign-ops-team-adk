@@ -9,9 +9,9 @@ from .config import MODEL, GOOGLE_CLOUD_PROJECT, GOOGLE_CLOUD_LOCATION, retry_co
 from .prompt import CAMPAIGN_ORCHESTRATOR_PROMPT
 
 # Import Manager Agents
-from campaign_ops_team.sub_agents.frontline_group.frontline_agents import frontline_manager_agent
-from campaign_ops_team.sub_agents.planner_group.planner_agents import planner_manager_agent
-from campaign_ops_team.sub_agents.delivery_group.delivery_agent import delivery_agent
+from .sub_agents.frontline_group.frontline_agents import frontline_manager_agent
+from .sub_agents.planner_group.planner_agents import planner_manager_agent
+from .sub_agents.delivery_group.delivery_agent import delivery_agent
 
 logging.basicConfig(
     level=logging.DEBUG, format="%(asctime)s - %(levelname)s - %(name)s - %(message)s"
@@ -31,7 +31,7 @@ root_agent = Agent(
     tools=[
         AgentTool(agent=frontline_manager_agent),
         AgentTool(agent=planner_manager_agent),
-        AgentTool(agent=delivery_agent)
+        AgentTool(agent=delivery_agent),
     ],
 )
 

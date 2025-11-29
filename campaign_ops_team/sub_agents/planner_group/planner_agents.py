@@ -1,8 +1,11 @@
 from google.adk.agents import LlmAgent
 from google.adk.tools import AgentTool
-from campaign_ops_team.tools.tools import google_search, segment_group_preparing_tool
+from campaign_ops_team.tools.tools import segment_group_preparing_tool
 from campaign_ops_team.config import MODEL, retry_config
 from google.adk.models import Gemini
+from campaign_ops_team.sub_agents.support_team.google_search_agent import (
+    google_search_agent,
+)
 
 # Goal Planning Agent
 goal_planning_agent = LlmAgent(
@@ -12,7 +15,7 @@ goal_planning_agent = LlmAgent(
     instruction="""
     You are the Goal Planning Agent. Your goal is to convert the frontline intake into structured goals, KPIs, and scheduling intent.
     Output a structured plan.
-    """
+    """,
 )
 
 # Segmentation Discovery Agent
@@ -24,7 +27,7 @@ segmentation_discovery_agent = LlmAgent(
     You are the Segmentation Discovery Agent. Your goal is to generate actionable segments, eligibility rules, and size estimates.
     Use the segment_group_preparing_tool if needed.
     """,
-    tools=[segment_group_preparing_tool]
+    tools=[segment_group_preparing_tool],
 )
 
 # Planner Critic Agent
@@ -37,19 +40,7 @@ planner_critic_agent = LlmAgent(
     Check for feasibility, conflicts, and quality.
     If good, output "APPROVED".
     If not, provide feedback.
-    """
-)
-
-# Google Search Agent
-google_search_agent = LlmAgent(
-    name="google_search_agent",
-    model=Gemini(model=MODEL, retry_options=retry_config),
-    description="Supports competitive research, seasonal patterns, industry insights.",
-    instruction="""
-    You are the Google Search Agent. Your goal is to provide competitive research, seasonal patterns, and industry insights.
-    Use the google_search tool to find information.
     """,
-    tools=[google_search]
 )
 
 # Reporter Agent
@@ -67,7 +58,7 @@ reporter_agent = LlmAgent(
     - constraints
     - delivery_plan
     Ensure no missing fields.
-    """
+    """,
 )
 
 # Planner Manager Agent
@@ -93,6 +84,6 @@ planner_manager_agent = LlmAgent(
         AgentTool(agent=segmentation_discovery_agent),
         AgentTool(agent=planner_critic_agent),
         AgentTool(agent=reporter_agent),
-        AgentTool(agent=google_search_agent)
-    ]
+        AgentTool(agent=google_search_agent),
+    ],
 )
