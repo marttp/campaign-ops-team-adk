@@ -55,11 +55,3 @@ def _campaign_creation_tool(campaign_name: str, details: str) -> str:
 
 
 campaign_creation_tool = FunctionTool(func=_campaign_creation_tool)
-
-
-def exit_loop():
-    """Call this function ONLY when the critique is 'APPROVED', indicating the story is finished and no more changes are needed."""
-    return {"status": "approved"}
-
-
-exit_loop_tool = FunctionTool(func=exit_loop)
