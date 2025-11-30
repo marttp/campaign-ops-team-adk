@@ -13,6 +13,8 @@ def internal_data_agent_tool(query: str) -> dict:
     It returns:
     - The full list of company-wide KPIs (DAU, GMV, success rate, monetization metrics, etc.)
     - The full list of commonly-used FinTech features (P2P transfer, QR payments, bill payment, etc.)
+    - A `mock_current_kpis` section that surfaces current baselines for a 1,000-user scale app so
+      Planner agents can set concrete KPI deltas and thresholds.
 
     Query Behavior:
         The `query` parameter is included for future semantic lookup or filtering,
@@ -135,9 +137,52 @@ def internal_data_agent_tool(query: str) -> dict:
         },
     ]
 
+    # -------------------------
+    # Mock KPI baselines for a 1,000-user scale
+    # -------------------------
+    mock_current_kpis = [
+        {
+            "metric": "monthly_active_users",
+            "value": 1000,
+            "unit": "users",
+            "comment": "Reference cohort size for campaign modeling.",
+        },
+        {
+            "metric": "avg_txn_per_user_month",
+            "value": 8.2,
+            "unit": "transactions/user/month",
+            "comment": "All channels blended frequency.",
+        },
+        {
+            "metric": "qr_txn_share",
+            "value": 0.35,
+            "unit": "share",
+            "comment": "35% of transactions are QR merchant payments.",
+        },
+        {
+            "metric": "avg_monthly_spend",
+            "value": 4200,
+            "unit": "THB/user/month",
+            "comment": "Wallet plus linked bank spend on-platform.",
+        },
+        {
+            "metric": "high_value_segment_size",
+            "value": 180,
+            "unit": "users",
+            "comment": ">=10,000 THB monthly spend in last 90 days.",
+        },
+        {
+            "metric": "cashback_redemption_rate",
+            "value": 0.22,
+            "unit": "rate",
+            "comment": "Share of users who redeem at least one voucher per month.",
+        },
+    ]
+
     return {
         "all_kpis": company_wide_kpis,
         "all_features": fintech_features,
+        "mock_current_kpis": mock_current_kpis,
     }
 
 
