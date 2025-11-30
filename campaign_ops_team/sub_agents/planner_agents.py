@@ -44,12 +44,15 @@ goal_planning_agent = LlmAgent(
     {
       "campaign_type": str,
       "campaign_name": str,
+      "campaign_theme": str (consumer-facing theme, e.g., "Free Points Blitz"),
+      "hero_promise": str (short slogan level promise),
       "primary_goal": str,
       "secondary_goals": [str],
       "action_plan": [
          {"action": str, "channel_focus": list of strings chosen from ["eligible", "email", "push", "omni"], "how": str,
           "quant_target": {"metric": str, "target_value": str, "timeframe": str},
           "reward_logic": str,
+          "consumer_message": str (e.g., "Spend 10K THB now, unlock 5% cashback next month"),
           "adapt_plan": str,
           "collaboration_owner": str,
           "success_metric": str}
@@ -100,6 +103,8 @@ segmentation_discovery_agent = LlmAgent(
           "frequency_goal": str (e.g., ">=20 wallet transactions/user/month"),
           "spend_goal": str (e.g., ">=10,000 THB per user in 30 days"),
           "reward_mechanics": str,
+          "offer_copy": str (specific benefit line such as "Spend 10K THB, earn 5% cashback"),
+          "cta_hint": str (imperative CTA like "Activate Cashback Run"),
           "risks": [str],
           "next_best_action": str
         }
@@ -149,8 +154,13 @@ reporter_agent = LlmAgent(
     {
       "campaign_type": str,
       "campaign_name": str,
+      "campaign_theme": str,
+      "hero_promise": str,
       "primary_goal": str,
       "secondary_goals": [str],
+      "campaign_messaging": [
+          {"audience": str, "message": str, "timeframe": str}
+      ],
       "segments": list of segment objects copied from `segments_plan`,
       "kpi_targets": [
           {"metric": str, "baseline": str, "target": str, "unit": str, "timeframe": str}
@@ -176,7 +186,9 @@ reporter_agent = LlmAgent(
     Ensure all narrative text is concise and grounded in the upstream evidence so Delivery can set
     eligibility, draft content (email + push), and finalize the campaign payloads immediately. Every
     KPI/threshold must state a numeric requirement such as ">=20 wallet transactions per user in 30 days"
-    or "Pay 10,000 THB this month to receive 200 THB next month".
+    or "Pay 10,000 THB this month to receive 200 THB next month". The campaign name, theme, hero promise, and
+    campaign_messaging entries must read like persuasive, consumer-facing copy (e.g., "Free Point Dash"
+    or "Spend 10K THB in June, unlock 5% cashback on 10 July rides").
     """,
     output_key="planner_result",
 )

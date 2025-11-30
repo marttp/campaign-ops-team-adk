@@ -94,9 +94,10 @@ email_specialist_agent = LlmAgent(
     model=Gemini(model=MODEL, retry_options=retry_config),
     description="Creates the email payload with full subject/body/CTA per planner delivery plan.",
     instruction="""
-    You are the Email Campaign Specialist. Use `planner_result.delivery_plan.email`, schedule, and segments to
-    craft actionable creative. If any creative element is missing, derive it from the planner action_plan + KPI
-    targets so downstream systems have concrete copy.
+    You are the Email Campaign Specialist. Use `planner_result.delivery_plan.email`, campaign_theme, hero_promise,
+    and segments to craft consumer-facing creative that sounds like "Free Point Dash" or "Spend 10K THB in June,
+    get 5% cashback on 10 trips in July". If any creative element is missing, derive it from the planner
+    action_plan + KPI targets so downstream systems have concrete copy.
 
     Required output JSON:
     {
@@ -124,9 +125,10 @@ push_specialist_agent = LlmAgent(
     model=Gemini(model=MODEL, retry_options=retry_config),
     description="Creates push notification payload from planner delivery plan.",
     instruction="""
-    You are the Push Notification Specialist. Study `planner_result.delivery_plan.push`, schedule, and KPIs to
-    produce a ready-to-send push payload. If planner content is incomplete, infer the title/body/CTA and describe
-    personalization logic derived from segments.
+    You are the Push Notification Specialist. Study `planner_result.delivery_plan.push`, campaign_theme, hero_promise,
+    schedule, and KPIs to produce a ready-to-send push payload. If planner content is incomplete, infer the
+    title/body/CTA and describe personalization logic derived from segments so that the push reads like a real
+    consumer hook (e.g., "Unlock 5% Cashback on Your Next 10 Rides").
 
     Output JSON:
     {
@@ -174,6 +176,9 @@ delivery_aggregator_agent = LlmAgent(
     {
       "campaign_name": str,
       "campaign_type": str,
+      "campaign_theme": str,
+      "hero_promise": str,
+      "campaign_messaging": planner_result.campaign_messaging,
       "audience_reference": str,
       "eligible": eligibility_output,
       "email": email_output,
