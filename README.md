@@ -36,6 +36,8 @@ This design keeps the repo self-contained (all mock tools live in-code) while sh
    GOOGLE_GENAI_USE_VERTEXAI=1
    GOOGLE_CLOUD_PROJECT=???
    GOOGLE_CLOUD_LOCATION=???
+   GOOGLE_CLOUD_AGENT_ENGINE_ENABLE_TELEMETRY=true # For enable telemetry
+   OTEL_INSTRUMENTATION_GENAI_CAPTURE_MESSAGE_CONTENT=true # For enable message prompt capture
    ```
 
    If you want to run locally, you can use the following environment variables:
