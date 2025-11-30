@@ -1,20 +1,44 @@
 from google.adk.agents import LlmAgent
 from google.adk.tools import AgentTool
-from campaign_ops_team.tools.tools import internal_data_agent_tool
-from campaign_ops_team.config import MODEL, retry_config
+from ...tools import internal_data_agent_tool
+from ...config import MODEL, retry_config
 from google.adk.models import Gemini
+from pydantic import BaseModel, Field
+from typing import List
+
+
+class CampaignScenarioEstimate(BaseModel):
+    goal: str = Field(
+        description="The primary objective of this campaign (e.g., increase DAU, drive GMV).",
+    )
+    possible_features: List[str] = Field(
+        description="List of product features that could be involved in this campaign.",
+    )
+    best_case: str = Field(
+        description="Optimistic outcome scenario if the campaign performs exceptionally well.",
+    )
+    worst_case: str = Field(
+        description="Negative outcome scenario if the campaign fails or underperforms.",
+    )
+    average_case: str = Field(
+        description="Expected or most likely outcome scenario under typical conditions.",
+    )
+
 
 # Intake Agent
 intake_agent = LlmAgent(
     name="intake_agent",
     model=Gemini(model=MODEL, retry_options=retry_config),
-    description="Extracts campaign type, objectives, rough segmentation hypotheses, and constraints.",
+    description="Discover possible features that fit the goal of the user request by taking a look in internal metrics and product features.",
     instruction="""
-    You are the Intake Agent. Your goal is to extract campaign type, objectives, rough segmentation hypotheses, and constraints from the user request.
+    You are the Intake Agent. Your goal is to discover possible features that fit the goal of the user request.
+    User will provide a short metric goal or complex goal. Your work will be to find the best possible features that fit the goal.
     Use the internal_data_agent_tool to get context about product features and company metrics.
     Output a structured summary of the intake.
     """,
-    tools=[internal_data_agent_tool]
+    tools=[internal_data_agent_tool],
+    output_schema=CampaignScenarioEstimate,
+    output_key="intake_result",
 )
 
 # Frontline Critic Agent
@@ -26,7 +50,7 @@ frontline_critic_agent = LlmAgent(
     You are the Frontline Critic Agent. Your goal is to evaluate the Intake Agent's output for realism, missing elements, and conflicts.
     If the intake is good, output "APPROVED".
     If there are issues, explain them clearly so the Intake Agent can fix them.
-    """
+    """,
 )
 
 # Frontline Manager Agent
@@ -46,8 +70,7 @@ frontline_manager_agent = LlmAgent(
 
     Return the final approved intake summary.
     """,
-    tools=[
-        AgentTool(agent=intake_agent),
-        AgentTool(agent=frontline_critic_agent)
-    ]
+    tools=[AgentTool(agent=intake_agent), AgentTool(agent=frontline_critic_agent)],
+    output_schema=CampaignScenarioEstimate,
+    output_key="frontline_result",
 )
