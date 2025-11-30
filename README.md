@@ -36,24 +36,30 @@ This design keeps the repo self-contained (all mock tools live in-code) while sh
    ```bash
    uv run adk web
    ```
-4. **Deploy to Vertex AI Agent Engine**
-   ```bash
-   uv run adk deploy agent_engine campaign_ops_team \
-     --agent_engine_config_file=campaign_ops_team/.agent_engine_config.json \
-     --trace_to_cloud
-   ```
-5. **Express deploy (API key)**
-   ```bash
-   uv run adk deploy agent_engine campaign_ops_team \
-     --api_key=[api_key] \
-     --agent_engine_config_file=campaign_ops_team/.agent_engine_config.json \
-     --trace_to_cloud
-   ```
-6. **Manual test** – Streams responses until Ctrl+C to mimic ADK web behavior.
+
+4. Deployment. Pick either option
+
+   4.1. **Deploy to Vertex AI Agent Engine**
+      ```bash
+      uv run adk deploy agent_engine campaign_ops_team \
+      --agent_engine_config_file=campaign_ops_team/.agent_engine_config.json \
+      --trace_to_cloud
+      ```
+
+   4.2. **Express deploy (API key)**
+      ```bash
+      uv run adk deploy agent_engine campaign_ops_team \
+      --api_key=[api_key] \
+      --agent_engine_config_file=campaign_ops_team/.agent_engine_config.json \
+      --trace_to_cloud
+      ```
+
+5. **Manual test** – Streams responses until Ctrl+C to mimic ADK web behavior.
    ```bash
    uv run manual_operations/test.py
    ```
-7. **Clean up**
+
+6. **Clean up**
    ```bash
    uv run manual_operations/clean_up.py
    ```
@@ -63,35 +69,3 @@ This design keeps the repo self-contained (all mock tools live in-code) while sh
 - `PROJECT_DESCRIPTION.md` contains a concise writeup of the system for submissions.
 - `AI Architecture.jpg` illustrates the Frontline → Planner → Delivery pipeline.
 - All Planner and Delivery tools are mocked locally so demos run without external dependencies.
-
-## Command
-
-### ADK Web
-
-```bash
-uv run adk web
-```
-
-### Deploy Agent Engine
-
-```bash
-uv run adk deploy agent_engine campaign_ops_team --agent_engine_config_file=campaign_ops_team/.agent_engine_config.json --trace_to_cloud
-```
-
-### Deploy Agent Engine - Express Mode
-
-```bash
-uv run adk deploy agent_engine campaign_ops_team --api_key=[api_key] --agent_engine_config_file=campaign_ops_team/.agent_engine_config.json --trace_to_cloud
-```
-
-### Test connection - Agent Engine
-
-```bash
-uv run manual_operations/test.py
-```
-
-### Clean up - Agent Engine
-
-```bash
-uv run manual_operations/clean_up.py
-```
