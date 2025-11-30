@@ -12,7 +12,8 @@ CAMPAIGN_ORCHESTRATOR_PROMPT = """
     - Increase the revenue by 20%
     - Reduce the cost by 10%
     - Partial move traffic from feature A to feature B due to future opportunity.
-    Above just the example, it maybe more simple or complex e.g. net margin, net profit, etc.
+    Above just the example, it maybe more simple or complex e.g. net margin, net profit, or they might not defined any time frame.
+    It's your job to flagging for planner team that timeframe unspecified.
 
     Then transfer to the Frontline Group Agent.
 

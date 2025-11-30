@@ -141,6 +141,11 @@ def internal_data_agent_tool(query: str) -> dict:
     }
 
 
+def exit_loop():
+    """Call this function ONLY when the critique is 'APPROVED', indicating the analysis is finished and no more changes are needed."""
+    return {"status": "approved"}
+
+
 # Intake Agent
 intake_agent = LlmAgent(
     name="intake_agent",
@@ -169,14 +174,33 @@ frontline_critic_agent = LlmAgent(
     description="Evaluates the Intake Agent's output.",
     instruction="""
     You are the Frontline Critic Agent. Your goal is to evaluate the Intake Agent's output for realism, missing elements, and conflicts.
+    Proposal: {intake_result}
     If the intake is good, output "APPROVED".
+    If there are issues, explain them clearly so the refiner agent can fix them.
+    """,
+    output_key="critique",
+)
+
+refiner_agent = LlmAgent(
+    name="refiner_agent",
+    model=Gemini(model=MODEL),
+    description="Refines the Intake Agent's output based on critique.",
+    instruction="""
+    You are the Refiner Agent. Your goal is to refine the Intake Agent's output based on critique.
+
+    Proposal: {intake_result}
+    Critique: {critique}
+
+    If the critique is good, output "APPROVED".
     If there are issues, explain them clearly so the Intake Agent can fix them.
     """,
+    tools=[FunctionTool(func=exit_loop), FunctionTool(func=internal_data_agent_tool)],
+    output_key="intake_result",  # Overwrite the intake result
 )
 
 product_market_estimation_loop = LoopAgent(
     name="ProductMarketEstimationLoop",
-    sub_agents=[intake_agent, frontline_critic_agent],
+    sub_agents=[frontline_critic_agent, refiner_agent],
     max_iterations=2,  # Prevents infinite loops
 )
 
@@ -201,5 +225,5 @@ frontline_evidence_agent = LlmAgent(
 # Frontline Manager Agent
 frontline_manager_agent = SequentialAgent(
     name="frontline_manager_agent",
-    sub_agents=[product_market_estimation_loop, frontline_evidence_agent],
+    sub_agents=[intake_agent, product_market_estimation_loop, frontline_evidence_agent],
 )

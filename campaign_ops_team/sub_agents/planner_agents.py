@@ -1,5 +1,5 @@
 import google.genai.types as types
-from google.adk.agents import LlmAgent
+from google.adk.agents import LlmAgent, LoopAgent, SequentialAgent
 from google.adk.tools import AgentTool
 from ..tools import segment_group_preparing_tool
 from google.adk.models import Gemini
@@ -18,36 +18,64 @@ retry_config = types.HttpRetryOptions(
 goal_planning_agent = LlmAgent(
     name="goal_planning_agent",
     model=Gemini(model=MODEL, retry_options=retry_config),
-    description="Converts frontline output into structured goals, KPIs, and scheduling intent.",
+    description="Converts the frontline package into actionable goals, KPIs, and sequencing.",
     instruction="""
-    You are the Goal Planning Agent. Your goal is to convert the frontline intake into structured goals, KPIs, and scheduling intent.
-    Output a structured plan.
+    You are the Goal Planning Agent. Take the `frontline_result` JSON, restate the campaign_type and
+    objectives, then produce a structured planning brief that shows how the campaign will move from
+    concept to activation. Think deliberately about four pillars: Action (what gets built or launched),
+    How (channels, tooling, sequencing), Adapt (contingencies, personalization, experimentation), and
+    Integration & Collaboration (partners, dependent orgs, required approvals).
+
+    Respond using JSON with the following keys:
+    - campaign_type
+    - primary_goal
+    - secondary_goal (null if none)
+    - action_framework: list of objects each containing {action, how, adapt_plan, integration_points, collaboration_owner}
+    - measurement_plan: {primary_kpis: [], secondary_kpis: [], checkpoints: []}
+    - schedule_intent: {launch_window, cadences, prerequisites}
+    - dependencies_and_notes: include frontline insights, blockers, or data requests
     """,
+    tools=[AgentTool(agent=search_agent)],
+    output_key="goal_plan",
 )
 
 # Segmentation Discovery Agent
 segmentation_discovery_agent = LlmAgent(
     name="segmentation_discovery_agent",
     model=Gemini(model=MODEL, retry_options=retry_config),
-    description="Generates segments, rules, estimate sizes, explores customer behavior.",
+    description="Turns the goal plan into concrete segments, rules, and integration hooks.",
     instruction="""
-    You are the Segmentation Discovery Agent. Your goal is to generate actionable segments, eligibility rules, and size estimates.
-    Use the segment_group_preparing_tool if needed.
+    You are the Segmentation Discovery Agent. Using the latest `goal_plan`, explore behavioral,
+    demographic, and lifecycle signals to create executable segments. For each segment, clarify how
+    it supports the action plan, which tools or data integrations it needs, and collaboration touchpoints
+    (growth ops, data science, CRM engineering, etc.).
+
+    Provide JSON with:
+    - segment_overview: bullet summary tying segments to actions/how/adapt/integration themes
+    - segments: list where each item includes {name, definition, estimated_size, activation_channel,
+      tooling_or_integrations, collaboration_required, risks, next_best_action}
+    - tool_calls: capture any invocations or outputs from `segment_group_preparing_tool`
     """,
-    tools=[segment_group_preparing_tool],
+    tools=[segment_group_preparing_tool, AgentTool(agent=search_agent)],
+    output_key="segments_plan",
 )
 
 # Planner Critic Agent
 planner_critic_agent = LlmAgent(
     name="planner_critic_agent",
     model=Gemini(model=MODEL, retry_options=retry_config),
-    description="Validates strategy feasibility, conflicts, and quality.",
+    description="Validates feasibility, conflicts, and downstream readiness for Planner outputs.",
     instruction="""
-    You are the Planner Critic Agent. Evaluate the Goal and Segmentation outputs.
-    Check for feasibility, conflicts, and quality.
-    If good, output "APPROVED".
-    If not, provide feedback.
+    You are the Planner Critic Agent. Evaluate the combined `goal_plan` and `segments_plan` for:
+    - alignment with frontline intent and campaign objectives
+    - completeness across action/how/adapt/integration/collaboration dimensions
+    - feasibility of timelines, KPIs, and tool dependencies
+    - clarity of hand-off requirements for the Reporter/Delivery groups
+
+    If the plans meet the bar, respond exactly with "APPROVED". If not, provide concise, prioritized
+    feedback including what needs to change and where (goal plan vs. segments).
     """,
+    output_key="planner_critic_feedback",
 )
 
 # Reporter Agent
@@ -56,41 +84,35 @@ reporter_agent = LlmAgent(
     model=Gemini(model=MODEL, retry_options=retry_config),
     description="Produces a clean, validated, normalized JSON for delivery.",
     instruction="""
-    You are the Reporter Agent. You are the final step of the Planner group.
-    Produce a clean JSON object including:
-    - campaign_type
-    - goals
-    - segments
-    - schedule
-    - constraints
-    - delivery_plan
-    Ensure no missing fields.
+    You are the Reporter Agent, the final step of the Planner group. Synthesize the approved
+    `goal_plan` + `segments_plan` into the orchestrator-ready JSON contract:
+    {
+      "campaign_type": str,
+      "primary_goal": str,
+      "secondary_goal": str | null,
+      "segments": [...],
+      "audience_size": estimates per key segment and total,
+      "constraints": [risks, compliance, dependencies],
+      "schedule_plan": {launch_window, cadences, blockers},
+      "delivery_plan": {channel_handoffs, creative_needs, tooling_integration},
+      "risks": [{risk, mitigation, owner}],
+      "confidence": 0-1 float,
+      "references": {audience_tools_used, frontline_links}
+    }
+
+    Ensure the JSON is valid, compact, and explicitly mentions collaboration/integration notes needed
+    by the Delivery group.
     """,
 )
 
-# Planner Manager Agent
-planner_manager_agent = LlmAgent(
+# Planner Loop + Manager Agent
+planner_strategy_loop = LoopAgent(
+    name="planner_strategy_loop",
+    sub_agents=[goal_planning_agent, segmentation_discovery_agent, planner_critic_agent],
+    max_iterations=3,
+)
+
+planner_manager_agent = SequentialAgent(
     name="planner_manager_agent",
-    model=Gemini(model=MODEL, retry_options=retry_config),
-    description="Orchestrates the Planner Group to produce a detailed campaign plan.",
-    instruction="""
-    You are the Planner Manager. Your goal is to produce a detailed campaign plan JSON.
-
-    Follow this process:
-    1. Call `goal_planning_agent` with the input.
-    2. Call `segmentation_discovery_agent` with the goal plan.
-    3. Call `planner_critic_agent` to evaluate the Goal and Segmentation.
-    4. If the critic output contains "APPROVED", proceed to step 6.
-    5. If the critic provides feedback, call `goal_planning_agent` (and `segmentation_discovery_agent` if needed) to refine the plan. Repeat steps 3-5 (max 3 times).
-    6. Call `reporter_agent` with the final plan components to generate the final JSON.
-
-    You may use `google_search_agent` at any time for research if requested or needed.
-    """,
-    tools=[
-        AgentTool(agent=goal_planning_agent),
-        AgentTool(agent=segmentation_discovery_agent),
-        AgentTool(agent=planner_critic_agent),
-        AgentTool(agent=reporter_agent),
-        AgentTool(agent=search_agent),
-    ],
+    sub_agents=[planner_strategy_loop, reporter_agent],
 )
