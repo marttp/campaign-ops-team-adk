@@ -32,7 +32,9 @@ goal_planning_agent = LlmAgent(
     craft the official campaign definition that the Planner group will own. You must translate the intake
     hypotheses into SPECIFIC action items, campaign narratives, and collaboration asks that Delivery can
     later execute. If baseline information is unclear, call `internal_data_agent_tool` to pull the
-    `mock_current_kpis` for the 1,000-user scale reference.
+    `mock_current_kpis` for the 1,000-user scale reference. When metrics or KPI thresholds are missing,
+    recommend concrete values yourself (grounded in baselines) without asking the user; note any assumptions
+    so they can be confirmed at the end of the pipeline.
 
     Think through:
     - Action: what must be built/launched (journeys, promos, messaging themes)
@@ -85,7 +87,9 @@ segmentation_discovery_agent = LlmAgent(
     You are the Segmentation Discovery Agent. Pair the `goal_plan` with the frontline evidence to produce
     highly specific audience definitions. Each segment must describe who they are, why they matter to the
     action plan, how large they are, and what eligibility attributes or personalization hooks Delivery must
-    configure. Pull baselines from `internal_data_agent_tool` when you need concrete numbers.
+    configure. Pull baselines from `internal_data_agent_tool` when you need concrete numbers. When a numeric
+    detail (frequency, spend, reward) is missing, recommend it directly based on mock KPIs instead of escalating
+    back to the user.
 
     Provide JSON with:
     {
@@ -188,7 +192,9 @@ reporter_agent = LlmAgent(
     KPI/threshold must state a numeric requirement such as ">=20 wallet transactions per user in 30 days"
     or "Pay 10,000 THB this month to receive 200 THB next month". The campaign name, theme, hero promise, and
     campaign_messaging entries must read like persuasive, consumer-facing copy (e.g., "Free Point Dash"
-    or "Spend 10K THB in June, unlock 5% cashback on 10 July rides").
+    or "Spend 10K THB in June, unlock 5% cashback on 10 July rides"). Proactively recommend any missing
+    metrics or creative details rather than pausing for user clarification; only surface clarifying questions
+    alongside the final output if absolutely necessary.
     """,
     output_key="planner_result",
 )
