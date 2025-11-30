@@ -31,7 +31,13 @@ This design keeps the repo self-contained (all mock tools live in-code) while sh
    ```bash
    uv sync
    ```
-2. **Configure environment** – Set `GOOGLE_CLOUD_PROJECT`, `GOOGLE_CLOUD_LOCATION`, and any ADK credentials required by your deployment target.
+2. **Configure environment** – Set `GOOGLE_CLOUD_PROJECT`, `GOOGLE_CLOUD_LOCATION`, and any ADK credentials required by your deployment target. Here is the example of environment variables:
+   ```bash
+   GOOGLE_GENAI_USE_VERTEXAI=1
+   GOOGLE_API_KEY=???
+   GOOGLE_CLOUD_PROJECT=???
+   GOOGLE_CLOUD_LOCATION=???
+   ```
 3. **Run locally (ADK web sandbox)**
    ```bash
    uv run adk web
