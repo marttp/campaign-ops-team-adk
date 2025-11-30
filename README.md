@@ -1,5 +1,7 @@
 # Campaign Ops Agent
 
+![Project thumbnail](Project%20Thumbnail.png)
+
 ## Problem
 
 Marketing teams routinely juggle fragmented spreadsheets, creative briefs, and execution tickets when planning campaigns. Objectives, segmentation logic, and channel payloads are often disconnected, leading to slow iterations, unclear KPIs, and error-prone handoffs to channel teams. The process breaks down further when teams lack easy access to baseline metrics or must coordinate across multiple tool stacks.
