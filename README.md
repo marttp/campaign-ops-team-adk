@@ -1,6 +1,6 @@
 # Campaign Ops Agent
 
-![Project thumbnail](Project%20Thumbnail.png)
+![Project thumbnail](./Project%20Thumbnail.png)
 
 ## Problem
 
