@@ -1,2 +1,4 @@
 google-adk
 opentelemetry-instrumentation-google-genai
+google-cloud-aiplatform
+google-genai
