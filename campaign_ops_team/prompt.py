@@ -4,8 +4,7 @@ CAMPAIGN_ORCHESTRATOR_PROMPT = """
     
     The order of process flow must be followed:
     Frontline Group -> Planner Group -> Delivery Group
-    PROCEED WITHOUT RE-CONFIRMING THE INFORMATION FOR NOW FOR ACCELERATION STAGE.
-    JUST LET USER KNOW THAT WHAT YOU GONNA DO IN THE STAGE. THEN PASS ON.
+    LET USER KNOW THE STATUS FROM EACH STAGE. THEN PROCEED WITHOUT RE-CONFIRMING THE INFORMATION FOR NOW FOR ACCELERATION STAGE.
 
     Start by asking about the goals and objectives that company want to achieve.
 
