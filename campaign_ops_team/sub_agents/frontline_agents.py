@@ -1,13 +1,8 @@
-import logging
-
 import google.genai.types as types
 from google.adk.agents import LlmAgent
 from google.adk.models import Gemini
 from google.adk.tools import AgentTool
 from google.adk.tools.function_tool import FunctionTool
-from google.adk.tools.tool_context import ToolContext
-from pydantic import BaseModel, Field
-from typing import Any, List
 
 MODEL = "gemini-2.5-flash-lite"
 retry_config = types.HttpRetryOptions(
@@ -16,32 +11,6 @@ retry_config = types.HttpRetryOptions(
     initial_delay=1,
     http_status_codes=[429, 500, 503, 504],
 )
-
-
-class SafeAgentTool(AgentTool):
-    """AgentTool variant that falls back to invocation state if needed."""
-
-    async def run_async(
-        self,
-        *,
-        args: dict[str, Any],
-        tool_context: ToolContext,
-    ) -> Any:
-        try:
-            return await super().run_async(args=args, tool_context=tool_context)
-        except TypeError as exc:
-            if "NoneType" not in str(exc):
-                raise
-
-            if hasattr(self.agent, "output_key") and self.agent.output_key:
-                cached = tool_context.state.to_dict().get(self.agent.output_key)
-                if cached is not None:
-                    logging.warning(
-                        "Recovered %s output from state after empty content parts",
-                        self.agent.name,
-                    )
-                    return cached
-            raise
 
 
 def internal_data_agent_tool(query: str) -> dict:
@@ -180,24 +149,6 @@ def internal_data_agent_tool(query: str) -> dict:
     }
 
 
-class CampaignScenarioEstimate(BaseModel):
-    goal: str = Field(
-        description="The primary objective of this campaign (e.g., increase DAU, drive GMV).",
-    )
-    possible_features: List[str] = Field(
-        description="List of product features that could be involved in this campaign.",
-    )
-    best_case: str = Field(
-        description="Optimistic outcome scenario if the campaign performs exceptionally well.",
-    )
-    worst_case: str = Field(
-        description="Negative outcome scenario if the campaign fails or underperforms.",
-    )
-    average_case: str = Field(
-        description="Expected or most likely outcome scenario under typical conditions.",
-    )
-
-
 # Intake Agent
 intake_agent = LlmAgent(
     name="intake_agent",
@@ -255,6 +206,6 @@ frontline_manager_agent = LlmAgent(
     - average_case (expected or most likely outcome scenario under typical conditions)
 
     """,
-    tools=[SafeAgentTool(agent=intake_agent), SafeAgentTool(agent=frontline_critic_agent)],
+    tools=[AgentTool(agent=intake_agent), AgentTool(agent=frontline_critic_agent)],
     output_key="frontline_result",
 )
