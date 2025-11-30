@@ -2,7 +2,6 @@ import google.genai.types as types
 from google.adk.agents import LlmAgent, LoopAgent, SequentialAgent
 from google.adk.tools import AgentTool
 from google.adk.tools.function_tool import FunctionTool
-from ..tools import segment_group_preparing_tool
 from google.adk.models import Gemini
 from .google_search_agent import search_agent
 from .frontline_agents import internal_data_agent_tool
@@ -15,6 +14,13 @@ retry_config = types.HttpRetryOptions(
     initial_delay=1,
     http_status_codes=[429, 500, 503, 504],
 )
+
+
+def _segment_group_preparing_tool(segment_criteria: str) -> str:
+    return f"Segment Prepared: {segment_criteria}"
+
+
+segment_group_preparing_tool = FunctionTool(func=_segment_group_preparing_tool)
 
 # Goal Planning Agent
 goal_planning_agent = LlmAgent(
@@ -105,7 +111,11 @@ segmentation_discovery_agent = LlmAgent(
     Call `segment_group_preparing_tool` to draft any complex criteria objects and cite its outputs in
     "tool_calls". Use the Google Search agent if market/seasonal insight is necessary.
     """,
-    tools=[segment_group_preparing_tool, AgentTool(agent=search_agent), FunctionTool(func=internal_data_agent_tool)],
+    tools=[
+        segment_group_preparing_tool,
+        AgentTool(agent=search_agent),
+        FunctionTool(func=internal_data_agent_tool),
+    ],
     output_key="segments_plan",
 )
 
@@ -174,7 +184,11 @@ reporter_agent = LlmAgent(
 # Planner Loop + Manager Agent
 planner_strategy_loop = LoopAgent(
     name="planner_strategy_loop",
-    sub_agents=[goal_planning_agent, segmentation_discovery_agent, planner_critic_agent],
+    sub_agents=[
+        goal_planning_agent,
+        segmentation_discovery_agent,
+        planner_critic_agent,
+    ],
     max_iterations=3,
 )
 
