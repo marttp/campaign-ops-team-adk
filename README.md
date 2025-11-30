@@ -1,14 +1,66 @@
 # Campaign Ops Agent
 
-## Description
+## Problem
 
-The Campaign Ops Agent is a production-style, multi-agent orchestration pipeline built with Google's Agent Development Kit (ADK). It mirrors how real marketing teams operate (Frontline intake -> Planner/Marketing strategy -> Delivery execution) but runs each step with specialized AI agents. The Campaign Ops Orchestrator governs flow control, announces each stage to the user, ensures agents recommend missing metrics without halting for input, and escalates results downstream.
+Marketing teams routinely juggle fragmented spreadsheets, creative briefs, and execution tickets when planning campaigns. Objectives, segmentation logic, and channel payloads are often disconnected, leading to slow iterations, unclear KPIs, and error-prone handoffs to channel teams. The process breaks down further when teams lack easy access to baseline metrics or must coordinate across multiple tool stacks.
 
-- **Frontline Group**: Looping Intake and Critic agents interpret the user goal, call the internal data tool (now packed with mock KPIs for a 1,000-user scale), and output an approved frontline brief that includes goal hypotheses plus best/average/worst scenarios. A Frontline Evidence agent compacts this into a structured JSON contract.
-- **Planner Group**: Goal Planning, Segmentation Discovery, and Planner Critic agents iterate (bounded loop) until the campaign charter is ready. Instructions demand persuasive consumer content (campaign name/theme/hero promise, offers like "Spend 10K THB this month, unlock 5% cashback on 10 rides next month"), quantified KPI targets, segment definitions with eligibility + offer copy, and a delivery-ready JSON contract assembled by the Reporter.
-- **Delivery Group**: A ParallelAgent runs Eligibility, Email, and Push specialists simultaneously. Each agent calls locally defined tools to configure audiences or craft content, infers missing creative from planner outputs, and registers its work via a mock `campaign_creation_tool`. A Delivery Aggregator then merges `planner_result` with channel outputs, surfacing KPIs, schedule, and creation events for final reporting.
+## Solution
 
-This architecture demonstrates how ADK can power a modular marketing ops stack with deterministic handoffs, structured tool usage, and production-friendly prompts. The repo includes local mock tools so the system is self-contained for demos, plus deployment scripts for ADK agent engines.
+The Campaign Ops Agent is a production-style, multi-agent orchestration pipeline built with Google's Agent Development Kit (ADK). It mirrors real marketing organizations (Frontline intake → Planner/Marketing strategy → Delivery execution) and assigns each stage to specialized AI agents. The Campaign Ops Orchestrator:
+
+- Announces each stage to the user and shares status updates
+- Instructs agents to recommend missing metrics using mock KPI baselines for a 1,000-user app
+- Enforces bounded loops (intake/critic, goal/segment/critic) to refine outputs without delaying the user
+- Passes structured JSON contracts between groups so downstream agents never guess
+
+## Architecture Overview
+
+![Architecture](AI%20Architecture.jpg)
+
+1. **Frontline Group** – Looping Intake and Critic agents interpret goals, call the internal data tool, and output best/average/worst-case hypotheses. A Frontline Evidence agent compacts the approved package into `frontline_result`.
+2. **Planner Group** – Goal Planning, Segmentation Discovery, and Planner Critic agents iterate until a charter is feasible. The Reporter emits the `planner_result` JSON containing campaign name/theme/hero promise, segments, KPI targets, schedule, delivery briefs, and risks.
+3. **Delivery Group** – A ParallelAgent runs Eligibility, Email, and Push specialists concurrently. Each agent uses local mock tools to configure audiences or craft content, registers a creation event, and sends outputs to a Delivery Aggregator that returns the final execution packet.
+
+This design keeps the repo self-contained (all mock tools live in-code) while showcasing ADK primitives such as `SequentialAgent`, `LoopAgent`, `ParallelAgent`, and agent-to-agent tool calls.
+
+## Setup Instructions
+
+1. **Install dependencies**
+   ```bash
+   uv sync
+   ```
+2. **Configure environment** – Set `GOOGLE_CLOUD_PROJECT`, `GOOGLE_CLOUD_LOCATION`, and any ADK credentials required by your deployment target.
+3. **Run locally (ADK web sandbox)**
+   ```bash
+   uv run adk web
+   ```
+4. **Deploy to Vertex AI Agent Engine**
+   ```bash
+   uv run adk deploy agent_engine campaign_ops_team \
+     --agent_engine_config_file=campaign_ops_team/.agent_engine_config.json \
+     --trace_to_cloud
+   ```
+5. **Express deploy (API key)**
+   ```bash
+   uv run adk deploy agent_engine campaign_ops_team \
+     --api_key=[api_key] \
+     --agent_engine_config_file=campaign_ops_team/.agent_engine_config.json \
+     --trace_to_cloud
+   ```
+6. **Manual test** – Streams responses until Ctrl+C to mimic ADK web behavior.
+   ```bash
+   uv run manual_operations/test.py
+   ```
+7. **Clean up**
+   ```bash
+   uv run manual_operations/clean_up.py
+   ```
+
+## Additional Notes
+
+- `PROJECT_DESCRIPTION.md` contains a concise writeup of the system for submissions.
+- `AI Architecture.jpg` illustrates the Frontline → Planner → Delivery pipeline.
+- All Planner and Delivery tools are mocked locally so demos run without external dependencies.
 
 ## Command
 
