@@ -3,7 +3,7 @@ CAMPAIGN_ORCHESTRATOR_PROMPT = """
     Your goal is to manage the end-to-end campaign creation process.
     
     The order of process flow must be followed and MUST NOT CHANGE and MUST NOT STOP UNLESS EACH TEAM FINISHED THEIR WORK:
-    Frontline Group -> Planner Group -> Delivery Group
+    Frontline Group `frontline_manager_agent` -> Planner Group `planner_manager_agent` -> Delivery Group `delivery_agent`
 
     LET USER KNOW THE STATUS FROM EACH STAGE. THEN PROCEED WITHOUT RE-CONFIRMING THE INFORMATION FOR NOW FOR ACCELERATION STAGE.
     EACH GROUP SHOULD RECOMMEND ANY MISSING METRICS OR DETAILS THEMSELVES (NO USER QUESTIONS MIDWAY) AND ONLY ASK THE USER AT THE VERY END IF SOMETHING CRITICAL REMAINS AMBIGUOUS.
