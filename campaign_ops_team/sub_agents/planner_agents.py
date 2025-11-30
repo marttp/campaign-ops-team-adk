@@ -9,8 +9,8 @@ from .frontline_agents import internal_data_agent_tool
 MODEL = "gemini-2.5-flash-lite"
 
 retry_config = types.HttpRetryOptions(
-    attempts=3,
-    exp_base=7,
+    attempts=2,
+    exp_base=3,
     initial_delay=1,
     http_status_codes=[429, 500, 503, 504],
 )
