@@ -15,6 +15,11 @@ The Campaign Ops Agent is a production-style, multi-agent orchestration pipeline
 - Enforces bounded loops (intake/critic, goal/segment/critic) to refine outputs without delaying the user
 - Passes structured JSON contracts between groups so downstream agents never guess
 
+## Video Demo
+
+[![Video Demo](https://img.youtube.com/vi/3u7yM7klFOI/0.jpg)](https://youtu.be/3u7yM7klFOI)
+
+
 ## Architecture Overview
 
 ![Architecture](AI%20Architecture.jpg)
