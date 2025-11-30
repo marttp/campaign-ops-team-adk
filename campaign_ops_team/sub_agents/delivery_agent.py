@@ -18,36 +18,29 @@ retry_config = types.HttpRetryOptions(
 # ---------------------------------------------------------------------------
 
 
-def _eligibility_tool(rules: str) -> str:
+def eligibility_tool(rules: str) -> str:
     return f"Eligibility Rules Set: {rules}"
 
 
-def _find_audience_tool(criteria: str) -> str:
+def find_audience_tool(criteria: str) -> str:
     return f"Audience Found: [Mock] criteria={criteria}, matched_users=42,000"
 
 
-def _create_audience_tool(audience_name: str, criteria: str) -> str:
+def create_audience_tool(audience_name: str, criteria: str) -> str:
     return f"Audience Created: {audience_name} using {criteria}"
 
 
-def _email_tool(template_id: str, content: str) -> str:
+def email_tool(template_id: str, content: str) -> str:
     return f"Email Payload: template={template_id}, content={content[:60]}..."
 
 
-def _push_notification_tool(title: str, body: str) -> str:
+def push_notification_tool(title: str, body: str) -> str:
     return f"Push Payload: title={title}, body={body[:80]}..."
 
 
-def _campaign_creation_tool(campaign_name: str, details: str) -> str:
+def campaign_creation_tool(campaign_name: str, details: str) -> str:
     return f"Campaign Created: {campaign_name} | details={details[:80]}..."
 
-
-eligibility_tool = FunctionTool(func=_eligibility_tool)
-find_audience_tool = FunctionTool(func=_find_audience_tool)
-create_audience_tool = FunctionTool(func=_create_audience_tool)
-email_tool = FunctionTool(func=_email_tool)
-push_notification_tool = FunctionTool(func=_push_notification_tool)
-campaign_creation_tool = FunctionTool(func=_campaign_creation_tool)
 
 # Eligibility Specialist Agent
 eligibility_specialist_agent = LlmAgent(
@@ -80,10 +73,10 @@ eligibility_specialist_agent = LlmAgent(
     }
     """,
     tools=[
-        eligibility_tool,
-        find_audience_tool,
-        create_audience_tool,
-        campaign_creation_tool,
+        FunctionTool(eligibility_tool),
+        FunctionTool(find_audience_tool),
+        FunctionTool(create_audience_tool),
+        FunctionTool(campaign_creation_tool),
     ],
     output_key="eligibility_output",
 )
@@ -115,7 +108,7 @@ email_specialist_agent = LlmAgent(
     After the payload is ready, call `campaign_creation_tool` with the email campaign name + summary and store
     the response in `creation_result`.
     """,
-    tools=[email_tool, campaign_creation_tool],
+    tools=[FunctionTool(email_tool), FunctionTool(campaign_creation_tool)],
     output_key="email_output",
 )
 
@@ -146,7 +139,7 @@ push_specialist_agent = LlmAgent(
     After the payload is ready, call `campaign_creation_tool` with the push campaign name + summary and store
     the response in `creation_result`.
     """,
-    tools=[push_notification_tool, campaign_creation_tool],
+    tools=[FunctionTool(push_notification_tool), FunctionTool(campaign_creation_tool)],
     output_key="push_output",
 )
 
