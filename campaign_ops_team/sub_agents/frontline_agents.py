@@ -1,13 +1,50 @@
+import logging
+
+import google.genai.types as types
 from google.adk.agents import LlmAgent
-from google.adk.tools import AgentTool
-from ...config import MODEL, retry_config
 from google.adk.models import Gemini
-from pydantic import BaseModel, Field
-from typing import List
+from google.adk.tools import AgentTool
 from google.adk.tools.function_tool import FunctionTool
+from google.adk.tools.tool_context import ToolContext
+from pydantic import BaseModel, Field
+from typing import Any, List
+
+MODEL = "gemini-2.5-flash-lite"
+retry_config = types.HttpRetryOptions(
+    attempts=5,
+    exp_base=7,
+    initial_delay=1,
+    http_status_codes=[429, 500, 503, 504],
+)
 
 
-def _internal_data_agent_tool(query: str) -> dict:
+class SafeAgentTool(AgentTool):
+    """AgentTool variant that falls back to invocation state if needed."""
+
+    async def run_async(
+        self,
+        *,
+        args: dict[str, Any],
+        tool_context: ToolContext,
+    ) -> Any:
+        try:
+            return await super().run_async(args=args, tool_context=tool_context)
+        except TypeError as exc:
+            if "NoneType" not in str(exc):
+                raise
+
+            if hasattr(self.agent, "output_key") and self.agent.output_key:
+                cached = tool_context.state.to_dict().get(self.agent.output_key)
+                if cached is not None:
+                    logging.warning(
+                        "Recovered %s output from state after empty content parts",
+                        self.agent.name,
+                    )
+                    return cached
+            raise
+
+
+def internal_data_agent_tool(query: str) -> dict:
     """
     Provides company-wide FinTech KPIs and daily-used product features for use by agents.
     This tool acts as the unified internal data source for Intake, Planner, and Critic agents.
@@ -170,15 +207,15 @@ intake_agent = LlmAgent(
     You are the Intake Agent. Your goal is to discover possible features that fit the goal of the user request.
     User will provide a short metric goal or complex goal. Your work will be to find the best possible features that fit the goal.
     Use the internal_data_agent_tool to get context about product features and company metrics.
-    Output a structured summary of the intake. Expect results to be in JSON format. Data MUST not be null or None.
-    - goal
-    - possible_features
-    - best_case
-    - worst_case
-    - average_case
+
+    Response MUST follow and response all below concerns
+    - goal (short metric goal or complex goal)
+    - possible_features (list of product features that could be involved in this campaign)
+    - best_case (optimistic outcome scenario if the campaign performs exceptionally well)
+    - worst_case (negative outcome scenario if the campaign fails or underperforms)
+    - average_case (expected or most likely outcome scenario under typical conditions)
     """,
-    tools=[FunctionTool(func=_internal_data_agent_tool)],
-    output_schema=CampaignScenarioEstimate,
+    tools=[FunctionTool(func=internal_data_agent_tool)],
     output_key="intake_result",
 )
 
@@ -208,17 +245,16 @@ frontline_manager_agent = LlmAgent(
     3. If the critic output contains "APPROVED", you are done. Return the intake output.
     4. If the critic provides feedback, call the `intake_agent` again with the feedback to refine the intake.
     5. Repeat steps 2-4 until approved or for a maximum of 3 iterations.
+    6. Save state to `frontline_result`
 
-    Return the final approved intake summary.
+    Response MUST follow and response all below concerns:
+    - goal (short metric goal or complex goal)
+    - possible_features (list of product features that could be involved in this campaign)
+    - best_case (optimistic outcome scenario if the campaign performs exceptionally well)
+    - worst_case (negative outcome scenario if the campaign fails or underperforms)
+    - average_case (expected or most likely outcome scenario under typical conditions)
 
-    Expect results to be in JSON format. Data MUST not be null or None.
-    - goal
-    - possible_features
-    - best_case
-    - worst_case
-    - average_case
     """,
-    tools=[AgentTool(agent=intake_agent), AgentTool(agent=frontline_critic_agent)],
-    output_schema=CampaignScenarioEstimate,
+    tools=[SafeAgentTool(agent=intake_agent), SafeAgentTool(agent=frontline_critic_agent)],
     output_key="frontline_result",
 )

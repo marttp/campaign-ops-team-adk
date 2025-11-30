@@ -1,6 +1,7 @@
 from google.adk.agents import LlmAgent
+import google.genai.types as types
 
-from ...tools import (
+from ..tools import (
     eligibility_tool,
     email_tool,
     push_notification_tool,
@@ -8,8 +9,16 @@ from ...tools import (
     create_audience_tool,
     campaign_creation_tool,
 )
-from ...config import retry_config, MODEL
 from google.adk.models import Gemini
+
+MODEL = "gemini-2.5-flash-lite"
+
+retry_config = types.HttpRetryOptions(
+    attempts=3,
+    exp_base=7,
+    initial_delay=1,
+    http_status_codes=[429, 500, 503, 504],
+)
 
 # Delivery Agent
 delivery_agent = LlmAgent(

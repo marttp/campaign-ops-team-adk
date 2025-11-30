@@ -1,9 +1,18 @@
+import google.genai.types as types
 from google.adk.agents import LlmAgent
 from google.adk.tools import AgentTool
-from ...tools import segment_group_preparing_tool
-from ...config import MODEL, retry_config
+from ..tools import segment_group_preparing_tool
 from google.adk.models import Gemini
-from ..support_team.google_search_agent import google_search_agent
+from .google_search_agent import search_agent
+
+MODEL = "gemini-2.5-flash-lite"
+
+retry_config = types.HttpRetryOptions(
+    attempts=3,
+    exp_base=7,
+    initial_delay=1,
+    http_status_codes=[429, 500, 503, 504],
+)
 
 # Goal Planning Agent
 goal_planning_agent = LlmAgent(
@@ -82,6 +91,6 @@ planner_manager_agent = LlmAgent(
         AgentTool(agent=segmentation_discovery_agent),
         AgentTool(agent=planner_critic_agent),
         AgentTool(agent=reporter_agent),
-        AgentTool(agent=google_search_agent),
+        AgentTool(agent=search_agent),
     ],
 )

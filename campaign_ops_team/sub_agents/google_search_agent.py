@@ -1,11 +1,19 @@
 from google.adk.agents import LlmAgent
 from google.adk.models.google_llm import Gemini
 from google.adk.tools.google_search_tool import google_search
+import google.genai.types as types
 
-from campaign_ops_team.config import retry_config, MODEL
+MODEL = "gemini-2.5-flash-lite"
+
+retry_config = types.HttpRetryOptions(
+    attempts=3,
+    exp_base=7,
+    initial_delay=1,
+    http_status_codes=[429, 500, 503, 504],
+)
 
 # Google Search Agent
-google_search_agent = LlmAgent(
+search_agent = LlmAgent(
     name="google_search_agent",
     model=Gemini(model=MODEL, retry_options=retry_config),
     description="Supports competitive research, seasonal patterns, industry insights.",
