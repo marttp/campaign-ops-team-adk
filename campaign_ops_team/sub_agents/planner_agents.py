@@ -16,11 +16,9 @@ retry_config = types.HttpRetryOptions(
 )
 
 
-def _segment_group_preparing_tool(segment_criteria: str) -> str:
+def segment_group_preparing_tool(segment_criteria: str) -> str:
     return f"Segment Prepared: {segment_criteria}"
 
-
-segment_group_preparing_tool = FunctionTool(func=_segment_group_preparing_tool)
 
 # Goal Planning Agent
 goal_planning_agent = LlmAgent(
@@ -121,7 +119,7 @@ segmentation_discovery_agent = LlmAgent(
     "tool_calls". Use the Google Search agent if market/seasonal insight is necessary.
     """,
     tools=[
-        segment_group_preparing_tool,
+        FunctionTool(func=segment_group_preparing_tool),
         AgentTool(agent=search_agent),
         FunctionTool(func=internal_data_agent_tool),
     ],
