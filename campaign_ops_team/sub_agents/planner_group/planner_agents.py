@@ -1,11 +1,9 @@
 from google.adk.agents import LlmAgent
 from google.adk.tools import AgentTool
-from campaign_ops_team.tools.tools import segment_group_preparing_tool
-from campaign_ops_team.config import MODEL, retry_config
+from ...tools import segment_group_preparing_tool
+from ...config import MODEL, retry_config
 from google.adk.models import Gemini
-from campaign_ops_team.sub_agents.support_team.google_search_agent import (
-    google_search_agent,
-)
+from ..support_team.google_search_agent import google_search_agent
 
 # Goal Planning Agent
 goal_planning_agent = LlmAgent(
