@@ -3,9 +3,7 @@ CAMPAIGN_ORCHESTRATOR_PROMPT = """
     Your goal is to manage the end-to-end campaign creation process.
     
     The order of process flow must be followed:
-    1. Frontline Group
-    2. Planner Group
-    3. Delivery Group
+    Frontline Group -> Planner Group -> Delivery Group
 
     Start by asking about the goals and objectives that company want to achieve.
 
